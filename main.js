@@ -9,7 +9,7 @@ canvas.height = window.innerHeight;
 
 let userLat = null, userLng = null;
 let alpha = 0, beta = 0, gamma = 0;
-const VERSION = "v1.0.033";
+const VERSION = "v1.0.034";
 
 const zoom = 16;
 const tileSize = 256;
@@ -51,9 +51,9 @@ function startSensors() {
             .then(state => {
                 if(state==='granted'){
                     window.addEventListener('deviceorientation', e => {
-                        alpha = e.alpha || 0;   // compass
-                        beta = e.beta || 0;     // pitch
-                        gamma = e.gamma || 0;   // roll
+                        alpha = e.alpha || 0;
+                        beta = e.beta || 0;
+                        gamma = e.gamma || 0;
                         updateInfo();
                     });
                     startBtn.style.display = 'none';
@@ -117,12 +117,13 @@ function drawARMap() {
     ctx.save();
     ctx.translate(canvas.width/2, canvas.height/2);
 
-    // --------- Helyes orientáció ---------
-    const alphaRad = (alpha - 180) * Math.PI/180; // 180° = észak
-    const gammaRad = gamma * Math.PI/180;         // roll
+    // --------- AR orientáció ---------
+    const alphaRad = (alpha - 180) * Math.PI/180; // irány
+    const betaRad = beta * Math.PI/180;           // előre-hátra
+    const gammaRad = gamma * Math.PI/180;         // oldalirány
 
-    ctx.rotate(-alphaRad);                 // forgatás horizont síkban
-    ctx.transform(1, 0, Math.tan(gammaRad), 1, 0, 0); // oldalirányú dőlés
+    ctx.rotate(-alphaRad);
+    ctx.transform(1, Math.tan(-betaRad), Math.tan(gammaRad), 1, 0, 0);
 
     // Középső tile koordináták
     const centerX = long2tile(userLng, zoom);
