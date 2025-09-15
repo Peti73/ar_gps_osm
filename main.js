@@ -27,27 +27,30 @@ navigator.geolocation.watchPosition(pos => {
 // -------------------- GIROSZKÓP / ORIENTATION --------------------
 let alpha = 0, beta = 0, gamma = 0;
 
-function setupOrientation() {
+const enableBtn = document.getElementById('enableOrientation');
+enableBtn.addEventListener('click', () => {
     if (typeof DeviceOrientationEvent.requestPermission === 'function') {
         DeviceOrientationEvent.requestPermission()
             .then(permissionState => {
                 if (permissionState === 'granted') {
                     window.addEventListener('deviceorientation', handleOrientation);
+                    enableBtn.style.display = 'none';
+                } else {
+                    alert('Permission denied for Device Orientation');
                 }
             })
             .catch(console.error);
     } else {
         window.addEventListener('deviceorientation', handleOrientation);
+        enableBtn.style.display = 'none';
     }
-}
+});
 
 function handleOrientation(e) {
-    alpha = e.alpha || 0; // irány
-    beta = e.beta || 0;   // előre/hátra dőlés
-    gamma = e.gamma || 0; // oldalirányú dőlés
+    alpha = e.alpha || 0;
+    beta = e.beta || 0;
+    gamma = e.gamma || 0;
 }
-
-setupOrientation();
 
 // -------------------- OSM TILE HELPERS --------------------
 const zoom = 16;
@@ -70,7 +73,7 @@ function drawTiles() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.save();
     ctx.translate(canvas.width / 2, canvas.height / 2);
-    ctx.rotate(-alpha * Math.PI / 180);
+    ctx.rotate(-alpha * Math.PI / 180); // giroszkóp irány
 
     for (let dx = -tileRange; dx <= tileRange; dx++) {
         for (let dy = -tileRange; dy <= tileRange; dy++) {
