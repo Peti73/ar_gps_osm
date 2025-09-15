@@ -7,12 +7,20 @@ let alpha = 0, beta = 0, gamma = 0;
 const VERSION = "v1.0.0";
 
 // ---------------- Kamera bekapcsolása ----------------
-navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-    .then(stream => { video.srcObject = stream; })
-    .catch(err => console.error("Kamera hiba:", err));
+async function startCamera() {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        video.srcObject = stream;
+        await video.play(); // iOS-nél explicit hívás szükséges
+    } catch (err) {
+        console.error("Kamera hiba:", err);
+    }
+}
 
 // ---------------- Start GPS + Orientation ----------------
-startBtn.addEventListener('click', () => {
+startBtn.addEventListener('click', async () => {
+
+    await startCamera();
 
     // GPS indítása
     navigator.geolocation.watchPosition(
