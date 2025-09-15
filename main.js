@@ -9,19 +9,17 @@ canvas.height = window.innerHeight;
 
 let userLat = null, userLng = null;
 let alpha = 0, beta = 0, gamma = 0;
-const VERSION = "v1.0.31";
+const VERSION = "v1.0.032";
+
+const zoom = 16;
+const tileSize = 256;
+const tiles = {}; // cache
 
 // POI példa
 const POIs = [
-    { lat: 47.4979, lng: 19.0402 }, // Budapest példa
+    { lat: 47.4979, lng: 19.0402 },
     { lat: 47.4985, lng: 19.0390 }
 ];
-
-// Tile méretezés
-const tileSize = 256;
-const zoom = 16;
-const metersPerTile = 150; // approx zoom16
-const metersPerPixel = metersPerTile / tileSize;
 
 // ---------------- Kamera ----------------
 async function startCamera() {
@@ -36,7 +34,6 @@ async function startCamera() {
 
 // ---------------- GPS + Giroszkóp ----------------
 function startSensors() {
-    // GPS
     navigator.geolocation.watchPosition(
         pos => { 
             userLat = pos.coords.latitude;
@@ -47,7 +44,6 @@ function startSensors() {
         { enableHighAccuracy: true }
     );
 
-    // Giroszkóp
     if (typeof DeviceOrientationEvent.requestPermission === 'function') {
         DeviceOrientationEvent.requestPermission()
             .then(state => {
@@ -84,35 +80,66 @@ function updateInfo() {
     `;
 }
 
-// ---------------- Térkép koordináta -> pixel ----------------
-function latLngToPixel(lat, lng) {
-    const dxMeters = (lng - userLng) * 111320 * Math.cos(userLat * Math.PI/180);
-    const dyMeters = (lat - userLat) * 110540;
-    return { x: dxMeters / metersPerPixel, y: -dyMeters / metersPerPixel };
+// ---------------- Tile koordináták ----------------
+function long2tile(lon, zoom) { return Math.floor((lon + 180) / 360 * Math.pow(2, zoom)); }
+function lat2tile(lat, zoom) { 
+    return Math.floor((1 - Math.log(Math.tan(lat*Math.PI/180) + 1/Math.cos(lat*Math.PI/180))/Math.PI)/2 * Math.pow(2, zoom));
+}
+
+// ---------------- Tile betöltés ----------------
+function getTile(x, y, z) {
+    const key = `${z}_${x}_${y}`;
+    if(tiles[key]) return tiles[key];
+    const img = new Image();
+    img.crossOrigin = "Anonymous";
+    img.src = `https://tile.openstreetmap.org/${z}/${x}/${y}.png`;
+    tiles[key] = img;
+    return img;
+}
+
+// ---------------- GPS -> pixel ----------------
+function latLngToPixel(lat, lng, centerLat, centerLng) {
+    const dx = (lng - centerLng) * 111320 * Math.cos(centerLat*Math.PI/180);
+    const dy = (lat - centerLat) * 110540;
+    return { x: dx, y: -dy };
 }
 
 // ---------------- Rajzolás ----------------
 function drawARMap() {
-    if(userLat===null || userLng===null) {
+    if(userLat===null || userLng===null){
         requestAnimationFrame(drawARMap);
         return;
     }
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0,0,canvas.width,canvas.height);
     ctx.save();
     ctx.translate(canvas.width/2, canvas.height/2);
 
-    // Giroszkóp forgatás (alpha = irány, beta/pitch, gamma/roll)
-    const alphaRad = (alpha||0) * Math.PI/180;
-    const betaRad = (beta||0) * Math.PI/180;
-    const gammaRad = (gamma||0) * Math.PI/180;
+    const alphaRad = (alpha||0)*Math.PI/180;
+    const betaRad = (beta||0)*Math.PI/180;
+    const gammaRad = (gamma||0)*Math.PI/180;
 
-    ctx.rotate(-alphaRad); // az irány ellenkezője
+    ctx.rotate(-alphaRad);
     ctx.transform(1, Math.tan(-betaRad), Math.tan(-gammaRad), 1, 0, 0);
+
+    // Középső tile koordináták
+    const centerX = long2tile(userLng, zoom);
+    const centerY = lat2tile(userLat, zoom);
+
+    // 3x3 tile környezet
+    for(let dx=-1; dx<=1; dx++){
+        for(let dy=-1; dy<=1; dy++){
+            const tile = getTile(centerX+dx, centerY+dy, zoom);
+            const latTile = (180/Math.PI)*Math.atan(Math.sinh(Math.PI*(1-2*(centerY+dy)/Math.pow(2,zoom))));
+            const lngTile = (centerX+dx)/Math.pow(2,zoom)*360-180;
+            const p = latLngToPixel(latTile, lngTile, userLat, userLng);
+            ctx.drawImage(tile, p.x - tileSize/2, p.y - tileSize/2, tileSize, tileSize);
+        }
+    }
 
     // POI rajzolása
     POIs.forEach(poi=>{
-        const p = latLngToPixel(poi.lat, poi.lng);
+        const p = latLngToPixel(poi.lat, poi.lng, userLat, userLng);
         ctx.beginPath();
         ctx.arc(p.x, p.y, 8, 0, 2*Math.PI);
         ctx.fillStyle = "red";
@@ -123,7 +150,7 @@ function drawARMap() {
     requestAnimationFrame(drawARMap);
 }
 
-// ---------------- Start gomb ----------------
+// ---------------- Start ----------------
 startBtn.addEventListener('click', async () => {
     await startCamera();
     startSensors();
