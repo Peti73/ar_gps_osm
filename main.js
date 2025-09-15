@@ -9,7 +9,7 @@ canvas.height = window.innerHeight;
 
 let userLat = null, userLng = null;
 let alpha = 0, beta = 0, gamma = 0;
-const VERSION = "v1.0.3";
+const VERSION = "v1.0.31";
 
 // POI példa
 const POIs = [
