@@ -9,7 +9,7 @@ canvas.height = window.innerHeight;
 
 let userLat = null, userLng = null;
 let alpha = 0, beta = 0, gamma = 0;
-const VERSION = "v1.0.035";
+const VERSION = "v1.0.4";
 
 const zoom = 16;
 const tileSize = 256;
