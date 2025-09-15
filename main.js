@@ -1,11 +1,19 @@
 const info = document.getElementById('info');
 const startBtn = document.getElementById('startBtn');
+const video = document.getElementById('camera');
 
 let userLat = null, userLng = null;
 let alpha = 0, beta = 0, gamma = 0;
 const VERSION = "v1.0.0";
 
+// ---------------- Kamera bekapcsolása ----------------
+navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+    .then(stream => { video.srcObject = stream; })
+    .catch(err => console.error("Kamera hiba:", err));
+
+// ---------------- Start GPS + Orientation ----------------
 startBtn.addEventListener('click', () => {
+
     // GPS indítása
     navigator.geolocation.watchPosition(
         pos => { 
@@ -44,6 +52,7 @@ startBtn.addEventListener('click', () => {
     }
 });
 
+// ---------------- Info frissítése ----------------
 function updateInfo() {
     info.innerHTML = `
         Lat: ${userLat !== null ? userLat.toFixed(6) : '...'}<br>
