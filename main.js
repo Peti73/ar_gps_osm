@@ -9,7 +9,7 @@ canvas.height = window.innerHeight;
 
 let userLat = null, userLng = null;
 let alpha = 0, beta = 0, gamma = 0;
-const VERSION = "v1.0.034";
+const VERSION = "v1.0.035";
 
 const zoom = 16;
 const tileSize = 256;
@@ -99,11 +99,12 @@ function getTile(x, y, z) {
     return img;
 }
 
-// ---------------- GPS -> pixel ----------------
-function latLngToPixel(lat, lng, centerLat, centerLng) {
-    const dx = (lng - centerLng) * 111320 * Math.cos(centerLat*Math.PI/180);
-    const dy = (lat - centerLat) * 110540;
-    return { x: dx, y: -dy };
+// ---------------- LatLng -> Web Mercator pixel ----------------
+function latLngToPixelWebMercator(lat, lng, zoom) {
+    const scale = tileSize * Math.pow(2, zoom);
+    const x = (lng + 180)/360 * scale;
+    const y = (1 - Math.log(Math.tan(lat*Math.PI/180) + 1/Math.cos(lat*Math.PI/180))/Math.PI)/2 * scale;
+    return {x, y};
 }
 
 // ---------------- Rajzolás ----------------
@@ -118,33 +119,36 @@ function drawARMap() {
     ctx.translate(canvas.width/2, canvas.height/2);
 
     // --------- AR orientáció ---------
-    const alphaRad = (alpha - 180) * Math.PI/180; // irány
-    const betaRad = beta * Math.PI/180;           // előre-hátra
-    const gammaRad = gamma * Math.PI/180;         // oldalirány
+    const alphaRad = (alpha - 180) * Math.PI/180;
+    const betaRad = beta * Math.PI/180;
+    const gammaRad = gamma * Math.PI/180;
 
     ctx.rotate(-alphaRad);
     ctx.transform(1, Math.tan(-betaRad), Math.tan(gammaRad), 1, 0, 0);
 
-    // Középső tile koordináták
-    const centerX = long2tile(userLng, zoom);
-    const centerY = lat2tile(userLat, zoom);
+    // Felhasználó pixel koordinátája
+    const userPixel = latLngToPixelWebMercator(userLat, userLng, zoom);
 
-    // 3x3 tile környezet
+    // Tile környezet: ±1 tile
+    const centerX = Math.floor(userPixel.x / tileSize);
+    const centerY = Math.floor(userPixel.y / tileSize);
+
     for(let dx=-1; dx<=1; dx++){
         for(let dy=-1; dy<=1; dy++){
             const tile = getTile(centerX+dx, centerY+dy, zoom);
-            const latTile = (180/Math.PI)*Math.atan(Math.sinh(Math.PI*(1-2*(centerY+dy)/Math.pow(2,zoom))));
-            const lngTile = (centerX+dx)/Math.pow(2,zoom)*360-180;
-            const p = latLngToPixel(latTile, lngTile, userLat, userLng);
-            ctx.drawImage(tile, p.x - tileSize/2, p.y - tileSize/2, tileSize, tileSize);
+            const tileX = (centerX+dx) * tileSize;
+            const tileY = (centerY+dy) * tileSize;
+            ctx.drawImage(tile, Math.round(tileX - userPixel.x), Math.round(tileY - userPixel.y), tileSize, tileSize);
         }
     }
 
     // POI rajzolása
     POIs.forEach(poi=>{
-        const p = latLngToPixel(poi.lat, poi.lng, userLat, userLng);
+        const p = latLngToPixelWebMercator(poi.lat, poi.lng, zoom);
+        const dx = p.x - userPixel.x;
+        const dy = p.y - userPixel.y;
         ctx.beginPath();
-        ctx.arc(p.x, p.y, 8, 0, 2*Math.PI);
+        ctx.arc(Math.round(dx), Math.round(dy), 8, 0, 2*Math.PI);
         ctx.fillStyle = "red";
         ctx.fill();
     });
