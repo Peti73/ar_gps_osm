@@ -9,7 +9,7 @@ canvas.height = window.innerHeight;
 
 let userLat = null, userLng = null;
 let alpha = 0, beta = 0, gamma = 0;
-const VERSION = "v1.0.032";
+const VERSION = "v1.0.033";
 
 const zoom = 16;
 const tileSize = 256;
@@ -34,6 +34,7 @@ async function startCamera() {
 
 // ---------------- GPS + Giroszkóp ----------------
 function startSensors() {
+    // GPS
     navigator.geolocation.watchPosition(
         pos => { 
             userLat = pos.coords.latitude;
@@ -44,14 +45,15 @@ function startSensors() {
         { enableHighAccuracy: true }
     );
 
+    // Giroszkóp
     if (typeof DeviceOrientationEvent.requestPermission === 'function') {
         DeviceOrientationEvent.requestPermission()
             .then(state => {
                 if(state==='granted'){
                     window.addEventListener('deviceorientation', e => {
-                        alpha = e.alpha || 0;
-                        beta = e.beta || 0;
-                        gamma = e.gamma || 0;
+                        alpha = e.alpha || 0;   // compass
+                        beta = e.beta || 0;     // pitch
+                        gamma = e.gamma || 0;   // roll
                         updateInfo();
                     });
                     startBtn.style.display = 'none';
@@ -115,12 +117,12 @@ function drawARMap() {
     ctx.save();
     ctx.translate(canvas.width/2, canvas.height/2);
 
-    const alphaRad = (alpha||0)*Math.PI/180;
-    const betaRad = (beta||0)*Math.PI/180;
-    const gammaRad = (gamma||0)*Math.PI/180;
+    // --------- Helyes orientáció ---------
+    const alphaRad = (alpha - 180) * Math.PI/180; // 180° = észak
+    const gammaRad = gamma * Math.PI/180;         // roll
 
-    ctx.rotate(-alphaRad);
-    ctx.transform(1, Math.tan(-betaRad), Math.tan(-gammaRad), 1, 0, 0);
+    ctx.rotate(-alphaRad);                 // forgatás horizont síkban
+    ctx.transform(1, 0, Math.tan(gammaRad), 1, 0, 0); // oldalirányú dőlés
 
     // Középső tile koordináták
     const centerX = long2tile(userLng, zoom);
