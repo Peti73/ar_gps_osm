@@ -1,43 +1,28 @@
-<button id="start">Start GPS + Giroszkóp</button>
-<div id="info"></div>
-<script>
-const info = document.getElementById('info');
-let lat=null,lng=null,alpha=0,beta=0,gamma=0;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GPS + Giroszkóp Demo</title>
+<style>
+  body { margin:0; padding:0; background:black; color: yellow; font-family: monospace; }
+  #info { position: absolute; top: 20px; left: 20px; font-size: 18px; }
+  #startBtn { position: absolute; top:50%; left:50%; transform: translate(-50%, -50%); padding:10px 20px; font-size:16px; }
+</style>
+</head>
+<body>
 
-document.getElementById('start').addEventListener('click', () => {
-    // GPS indítása
-    navigator.geolocation.watchPosition(
-        pos => { lat = pos.coords.latitude; lng = pos.coords.longitude; updateInfo(); },
-        err => console.error(err),
-        { enableHighAccuracy: true }
-    );
+<div id="info">
+  Lat: ... <br>
+  Lng: ... <br>
+  Alpha: ... <br>
+  Beta: ... <br>
+  Gamma: ... <br>
+  Version: v1.0.0
+</div>
 
-    // Giroszkóp indítása
-    if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-        DeviceOrientationEvent.requestPermission()
-            .then(state=>{
-                if(state==='granted'){
-                    window.addEventListener('deviceorientation', e=>{
-                        alpha=e.alpha||0; beta=e.beta||0; gamma=e.gamma||0;
-                        updateInfo();
-                    });
-                } else alert("Girosszkóp engedély megtagadva");
-            }).catch(console.error);
-    } else {
-        window.addEventListener('deviceorientation', e=>{
-            alpha=e.alpha||0; beta=e.beta||0; gamma=e.gamma||0;
-            updateInfo();
-        });
-    }
-});
+<button id="startBtn">Start GPS + Orientation</button>
 
-function updateInfo() {
-    info.innerHTML = `
-        Lat: ${lat??'...'}<br>
-        Lng: ${lng??'...'}<br>
-        Alpha: ${alpha.toFixed(1)}<br>
-        Beta: ${beta.toFixed(1)}<br>
-        Gamma: ${gamma.toFixed(1)}
-    `;
-}
-</script>
+<script src="main.js"></script>
+</body>
+</html>
