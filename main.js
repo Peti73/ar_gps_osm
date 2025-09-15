@@ -4,7 +4,7 @@ const video = document.getElementById('camera');
 
 let userLat = null, userLng = null;
 let alpha = 0, beta = 0, gamma = 0;
-const VERSION = "v1.0.0";
+const VERSION = "v1.0.1";
 
 // ---------------- Kamera bekapcsolása ----------------
 async function startCamera() {
